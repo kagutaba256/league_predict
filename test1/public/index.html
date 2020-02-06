@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+
+<body>
+    <h1>
+        Match prediction test 1
+    </h1>
+    Summoner Name: <input type="text" id="summonername">
+    <button onclick="run()">Go</button>
+    <br>
+    <script>
+        async function run() {
+//            document.getElementById("summonername").value = "Yassuo"; //DEBUG
+            const summonername = document.getElementById("summonername").value;
+            const api_url = 'https://na1.api.riotgames.com';
+            const summoner_name_api_string = '/lol/summoner/v4/summoners/by-name/';
+            const live_match_api_string = '/lol/spectator/v4/active-games/by-summoner/';
+            const champion_json_url = 'http://ddragon.leagueoflegends.com/cdn/10.3.1/data/en_US/champion.json'
+            const champion_json_string = 'http://ddragon.leagueoflegends.com/cdn/10.3.1/data/en_US/champion'
+            const champion_avatar_string = 'http://ddragon.leagueoflegends.com/cdn/10.3.1/img/champion'
+            const x_riot_token = 'RGAPI-453a945f-ff67-435d-b65a-f8100414475f';
+            let url;
+            let response;
+            let json;
+            let temp;
+            getData()
+            async function getData() {
+                //getting summoner info
+                url = `${api_url}${summoner_name_api_string}${summonername}?api_key=${x_riot_token}`;
+                response = await fetch(url);
+                json = await response.json();
+                const main_summoner_id = json.id;
+                //getting match data
+                url = `${api_url}${live_match_api_string}${main_summoner_id}?api_key=${x_riot_token}`;
+                response = await fetch(url);
+                if(response.status != 200){
+                    if(response.status == 404){
+                        console.error("ERROR: Match was not found. Is that guy in a match?");
+                        return;
+                    } else {
+                        console.error(`ERROR: Response code ${response.status}`)
+                        return;
+                    }
+                }
+                json = await response.json();
+                
+                let participants = json.participants;
+                let team1 = [];
+                let team2 = [];
+                participants.forEach(elem => {
+                    if(elem.teamId === 100){
+                        team1.push(elem)
+                    } else {
+                        team2.push(elem)
+                    }
+                });
+                temp = await fetch(champion_json_url);
+                temp = await temp.json(); 
+                temp = temp.data;
+                let champions = {};
+                let temp_obj = {};
+                Object.entries(temp).forEach(champ => {
+                    champions[`${champ[1].key}`] = champ[1];
+                });
+                console.log(champions);
+                console.log(participants);
+                for(const par in participants){
+                   participants[par].championName = champions[`${participants[par].championId}`].id;
+                   response = await fetch(`${champion_json_string}/${participants[par].championName}.json`);
+                   participants[par].champion = await response.json();
+                   console.log(participants[par].champion.data);
+                   participants[par].championAvatarUrl = `${champion_avatar_string}/${participants[par].championName}.png`
+                   console.log(participants[par].championAvatarUrl);
+                };
+            }
+
+        }
+    </script>
+</body>
+
+</html>
